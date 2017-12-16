@@ -149,7 +149,7 @@ THE SOFTWARE.
 MIT
 MIT
 
-ng-zorro-antd-extra@1.1.3
+ng-zorro-antd-extra@1.1.6
 MIT
 MIT License
 
