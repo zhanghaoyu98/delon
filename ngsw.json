@@ -48,12 +48,7 @@
         "/delon/assets/screenshot/ipad.png",
         "/delon/assets/screenshot/iphone.png"
       ],
-      "patterns": [
-        "https:\\/\\/img\\.shields\\.io\\/.*",
-        "https:\\/\\/github\\.com\\/.*",
-        "https:\\/\\/cdnjs\\.cloudflare\\.com\\/.*",
-        "https:\\/\\/at\\.alicdn\\.com\\/.*"
-      ]
+      "patterns": []
     }
   ],
   "dataGroups": [],
