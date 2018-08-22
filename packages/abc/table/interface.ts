@@ -1,12 +1,31 @@
-import { SimpleTableComponent } from './simple-table.component';
+import { NaTableComponent } from './table.component';
 import { ModalHelperOptions } from '@delon/theme';
 
-export type CompareFn = ((a: any, b: any) => number);
+export type NaTableCompareFn = ((a: any, b: any) => number);
+
+export interface NaTableRequest {
+  /**
+   * 额外请求参数，默认自动附加 `pi`、`ps` 至URL
+   * - `{ status: 'new' }` => `url?pi=1&ps=10&status=new`
+   */
+  params?: any;
+  /** 请求方法，默认：`GET` */
+  method?: string;
+  /** 请求体 `body` */
+  body?: any;
+  /** 请求体 `Header` */
+  headers?: any;
+  /**
+   * 重命名请求参数 `pi`、`ps`，默认：`{ pi: 'pi', ps: 'ps' }`
+   * - `{ pi: 'Page' }` => `pi` 会被替换成 Page
+   */
+  reName?: NaTableReqReNameType;
+}
 
 /**
  * 数据源
  */
-export interface SimpleTableData {
+export interface NaTableData {
   /**
    * 选择框或单选框状态值
    */
@@ -22,7 +41,7 @@ export interface SimpleTableData {
 /**
  * 列描述
  */
-export interface SimpleTableColumn {
+export interface NaTableColumn {
   /**
    * 类型
    * - `checkbox` 多选
@@ -65,11 +84,11 @@ export interface SimpleTableColumn {
   /**
    * 链接回调，若返回一个字符串表示导航URL会自动触发 `router.navigateByUrl`
    */
-  click?: (record: any, instance?: SimpleTableComponent) => any;
+  click?: (record: any, instance?: NaTableComponent) => any;
   /**
    * 按钮组
    */
-  buttons?: SimpleTableButton[];
+  buttons?: NaTableButton[];
   /**
    * 自定义渲染ID
    * @example
@@ -98,7 +117,8 @@ export interface SimpleTableColumn {
   width?: string | number;
   /**
    * 排序的默认受控属性
-   * - 只支持同时对一列进行排序，除非指定 `multiSort`，建议后端支持时使用
+   * - 本地数据**只支持**同时对一列进行排序
+   * - 远程数据，允许指定 `multiSort`，进行多列排序
    * - 保证只有一列的 `sort` 值，否则自动获取所有列的第一个值
    */
   sort?: 'ascend' | 'descend';
@@ -111,7 +131,7 @@ export interface SimpleTableColumn {
   /**
    * 排序的后端相对应的KEY，默认使用 `index` 属性
    * - 若 `multiSort: false` 时：`sortKey: 'name' => ?name=1&pi=1`
-   * - 若 `multiSort: true` 允许多个排序 key 存在，或使用 `SimpleTableMultiSort` 进行多key合并
+   * - 若 `multiSort: true` 允许多个排序 key 存在，或使用 `NaTableMultiSort` 进行多key合并
    */
   sortKey?: string;
   /**
@@ -123,13 +143,13 @@ export interface SimpleTableColumn {
   /**
    * 表头的筛选菜单项，至少一项以上才会生效
    */
-  filters?: SimpleTableFilter[];
+  filters?: NaTableFilter[];
   /**
    * 本地模式下，确定筛选的运行函数
    * - 只有当属性存在时筛选才会真的生效
    * - 如果是AJAX直接返回 true
    */
-  filter?: (filter: SimpleTableFilter, record: any) => boolean;
+  filter?: (filter: NaTableFilter, record: any) => boolean;
   /**
    * 标识数据是否经过过滤，筛选图标会高亮
    */
@@ -161,7 +181,7 @@ export interface SimpleTableColumn {
    * - 参数为 `filters` 原样数组
    * - 返回为 Object 对象
    */
-  filterReName?: (list: SimpleTableFilter[], col: SimpleTableColumn) => Object;
+  filterReName?: (list: NaTableFilter[], col: NaTableColumn) => Object;
   /**
    * 格式化列值
    */
@@ -169,7 +189,7 @@ export interface SimpleTableColumn {
   /**
    * 自定义全/反选选择项
    */
-  selections?: SimpleTableSelection[];
+  selections?: NaTableSelection[];
   /**
    * 列 `class` 属性值（注：无须 `.` 点），例如：
    * - `text-center` 居中
@@ -220,11 +240,11 @@ export interface SimpleTableColumn {
   /**
    * 徽标配置项
    */
-  badge?: SimpleTableBadge;
+  badge?: NaTableBadge;
   /**
    * 标签配置项
    */
-  tag?: SimpleTableTag;
+  tag?: NaTableTag;
 
   [key: string]: any;
 }
@@ -232,7 +252,7 @@ export interface SimpleTableColumn {
 /**
  * 选择功能配置
  */
-export interface SimpleTableSelection {
+export interface NaTableSelection {
   /**
    * 选择项显示的文字
    */
@@ -240,7 +260,7 @@ export interface SimpleTableSelection {
   /**
    * 选择项点击回调，允许对参数 `data.checked` 进行操作
    */
-  select: (data: SimpleTableData[]) => void;
+  select: (data: NaTableData[]) => void;
   /** 权限，等同 `can()` 参数值 */
   acl?: any;
 }
@@ -248,7 +268,7 @@ export interface SimpleTableSelection {
 /**
  * 过滤项配置
  */
-export interface SimpleTableFilter {
+export interface NaTableFilter {
   /**
    * 文本
    */
@@ -270,7 +290,7 @@ export interface SimpleTableFilter {
 /**
  * 按钮配置
  */
-export interface SimpleTableButton {
+export interface NaTableButton {
   /**
    * 文本
    */
@@ -282,7 +302,7 @@ export interface SimpleTableButton {
   /**
    * 格式化文本，较高调用频率，请勿过多复杂计算免得产生性能问题
    */
-  format?: (record: any, btn: SimpleTableButton) => string;
+  format?: (record: any, btn: NaTableButton) => string;
   /**
    * 按钮类型
    * - `none` 无任何互动
@@ -302,7 +322,7 @@ export interface SimpleTableButton {
   click?:
     | 'reload'
     | 'load'
-    | ((record: any, modal?: any, instance?: SimpleTableComponent) => any);
+    | ((record: any, modal?: any, instance?: NaTableComponent) => any);
   /**
    * 是否需要气泡确认框
    */
@@ -343,7 +363,7 @@ export interface SimpleTableButton {
    * 下拉菜单，当存在时以 `dropdown` 形式渲染
    * - 只支持一级
    */
-  children?: SimpleTableButton[];
+  children?: NaTableButton[];
   /**
    * 权限，等同 `can()` 参数值
    */
@@ -353,8 +373,8 @@ export interface SimpleTableButton {
    */
   iif?: (
     item: any,
-    btn: SimpleTableButton,
-    column: SimpleTableColumn,
+    btn: NaTableButton,
+    column: NaTableColumn,
   ) => boolean;
 
   [key: string]: any;
@@ -363,7 +383,7 @@ export interface SimpleTableButton {
 /**
  * 回调数据
  */
-export interface SimpleTableChange {
+export interface NaTableChange {
   /**
    * 回调类型
    */
@@ -382,19 +402,19 @@ export interface SimpleTableChange {
   total: number;
 }
 
-export interface ReqReNameType {
+export interface NaTableReqReNameType {
   pi?: string;
   ps?: string;
 }
 
-export interface ResReNameType {
+export interface NaTableResReNameType {
   total?: string | string[];
   list?: string | string[];
 }
 
-export interface STExportOptions {
+export interface NaTableExportOptions {
   _d?: any[];
-  _c?: SimpleTableColumn[];
+  _c?: NaTableColumn[];
   /** 工作溥名 */
   sheetname?: string;
   /** 文件名 */
@@ -406,7 +426,7 @@ export interface STExportOptions {
 /**
  * 多排序相同排序 key 时合并规则
  */
-export interface SimpleTableMultiSort {
+export interface NaTableMultiSort {
   /** 请求参数名，默认：`sort` */
   key?: string;
   /** 不同属性间分隔符，默认：`-` */
@@ -418,12 +438,12 @@ export interface SimpleTableMultiSort {
 /**
  * 徽标信息
  */
-export interface SimpleTableBadge {
-  [key: number]: SimpleTableBadgeValue;
-  [key: string]: SimpleTableBadgeValue;
+export interface NaTableBadge {
+  [key: number]: NaTableBadgeValue;
+  [key: string]: NaTableBadgeValue;
 }
 
-export interface SimpleTableBadgeValue {
+export interface NaTableBadgeValue {
   /**
    * 文本
    */
@@ -437,12 +457,12 @@ export interface SimpleTableBadgeValue {
 /**
  * 标签信息
  */
-export interface SimpleTableTag {
-  [key: number]: SimpleTableTagValue;
-  [key: string]: SimpleTableTagValue;
+export interface NaTableTag {
+  [key: number]: NaTableTagValue;
+  [key: string]: NaTableTagValue;
 }
 
-export interface SimpleTableTagValue {
+export interface NaTableTagValue {
   /**
    * 文本
    */
@@ -468,8 +488,8 @@ export interface SimpleTableTagValue {
 }
 
 /** 行单击参数 */
-export interface SimpleTableRowClick {
+export interface NaTableRowClick {
   e?: Event;
-  item?: SimpleTableData;
+  item?: NaTableData;
   index?: number;
 }

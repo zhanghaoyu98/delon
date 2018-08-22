@@ -4,7 +4,6 @@ import {
   Input,
   Output,
   OnDestroy,
-  OnInit,
   OnChanges,
   SimpleChanges,
   EventEmitter,
@@ -14,11 +13,13 @@ import {
   SimpleChange,
   ContentChild,
   Optional,
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { DecimalPipe, DOCUMENT } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { ACLService } from '@delon/acl';
 import { Observable, Subscription, of } from 'rxjs';
 import { tap, map, filter } from 'rxjs/operators';
 import {
@@ -30,79 +31,72 @@ import {
   AlainI18NService,
   ModalHelperOptions,
 } from '@delon/theme';
-import { deepGet, deepCopy, toBoolean, toNumber } from '@delon/util';
+import {
+  deepGet,
+  deepCopy,
+  toBoolean,
+  toNumber,
+  updateHostClass,
+} from '@delon/util';
 
 import {
-  SimpleTableColumn,
-  SimpleTableChange,
-  CompareFn,
-  SimpleTableSelection,
-  SimpleTableFilter,
-  SimpleTableData,
-  SimpleTableButton,
-  STExportOptions,
-  ResReNameType,
-  ReqReNameType,
-  SimpleTableMultiSort,
-  SimpleTableRowClick,
+  NaTableColumn,
+  NaTableChange,
+  NaTableCompareFn,
+  NaTableSelection,
+  NaTableFilter,
+  NaTableData,
+  NaTableButton,
+  NaTableExportOptions,
+  NaTableResReNameType,
+  NaTableMultiSort,
+  NaTableRowClick,
+  NaTableRequest,
 } from './interface';
-import { AdSimpleTableConfig } from './simple-table.config';
-import { SimpleTableExport } from './simple-table-export';
+import { NaTableConfig } from './table.config';
+import { NaTableExport } from './table-export';
+import { NaTableColumnSource, NaTableSortMap } from './table-column-source';
+import { NaTableRowSource } from './table-row.directive';
 
 @Component({
-  selector: 'simple-table',
-  templateUrl: './simple-table.component.html',
-  host: { '[class.ad-st]': 'true' },
-  providers: [SimpleTableExport, CNCurrencyPipe, DatePipe, YNPipe, DecimalPipe],
+  selector: 'na-table',
+  templateUrl: './table.component.html',
+  host: { '[class.na-table]': 'true' },
+  providers: [
+    NaTableRowSource,
+    NaTableColumnSource,
+    NaTableExport,
+    CNCurrencyPipe,
+    DatePipe,
+    YNPipe,
+    DecimalPipe,
+  ],
   preserveWhitespaces: false,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
+export class NaTableComponent implements AfterViewInit, OnChanges, OnDestroy {
   private data$: Subscription;
   private i18n$: Subscription;
-  private _inited = false;
-  _data: SimpleTableData[] = [];
-  _url: string;
-  _isAjax = false;
+  private inited = false;
+  private url: string;
+  private isAjax = false;
+  _data: NaTableData[] = [];
   _isPagination = true;
-  _classMap: string[] = [];
   _allChecked = false;
   _indeterminate = false;
-  _columns: SimpleTableColumn[] = [];
-  _customTitles: { [key: string]: TemplateRef<any> } = {};
-  _customRows: { [key: string]: TemplateRef<any> } = {};
+  _columns: NaTableColumn[] = [];
 
   //#region fields
 
   /** 数据源 */
   @Input()
   data: string | any[] | Observable<any[]>;
-  /**
-   * 额外请求参数，默认自动附加 `pi`、`ps` 至URL
-   * - `{ status: 'new' }` => `url?pi=1&ps=10&status=new`
-   */
+  /** 请求体配置 */
   @Input()
-  extraParams: any;
-  /** 请求方法 */
-  @Input()
-  reqMethod: string = 'GET';
-  /** 请求体 `body` */
-  @Input()
-  reqBody: any;
-  /** 请求体 `Header` */
-  @Input()
-  reqHeaders: any;
-  /**
-   * 重命名请求参数 `pi`、`ps`
-   * - `{ pi: 'Page' }` => `pi` 会被替换成 Page
-   */
-  @Input()
-  set reqReName(value: ReqReNameType) {
-    this._reqReName = Object.assign(this._reqReName, value);
+  set req(value: NaTableRequest) {
+    this._req = Object.assign({}, this.cog.req, value);
   }
-  get reqReName() {
-    return this._reqReName;
-  }
-  private _reqReName: ReqReNameType = { pi: 'pi', ps: 'ps' };
+  private _req: NaTableRequest;
   /** 请求异常时回调 */
   @Output()
   readonly reqError: EventEmitter<any> = new EventEmitter<any>();
@@ -111,8 +105,8 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
    * - `{ total: 'Total' }` => Total 会被当作 `total`
    */
   @Input()
-  set resReName(cur: ResReNameType) {
-    let ret: ResReNameType = {};
+  set resReName(cur: NaTableResReNameType) {
+    let ret: NaTableResReNameType = {};
     if (cur) {
       if (cur.list)
         ret.list = Array.isArray(cur.list) ? cur.list : cur.list.split('.');
@@ -129,10 +123,13 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   get resReName() {
     return this._resReName;
   }
-  private _resReName: ResReNameType = { total: ['total'], list: ['list'] };
+  private _resReName: NaTableResReNameType = {
+    total: ['total'],
+    list: ['list'],
+  };
   /** 列描述  */
   @Input()
-  columns: SimpleTableColumn[] = [];
+  columns: NaTableColumn[] = [];
   /** 每页数量，当设置为 `0` 表示不分页，默认：`10` */
   @Input()
   get ps() {
@@ -245,7 +242,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   }
   /**
    * 前端分页，当 `data` 为`any[]` 或 `Observable<any[]>` 有效，默认：`true`
-   * - `true` 由 `simple-table` 根据 `data` 长度受控分页，包括：排序、过滤等
+   * - `true` 由 `na-table` 根据 `data` 长度受控分页，包括：排序、过滤等
    * - `false` 由用户通过 `total` 和 `data` 参数受控分页，并维护 `(change)` 当分页变更时重新加载数据
    */
   @Input()
@@ -267,7 +264,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   private _isPageIndexReset = true;
   /** 分页方向 */
   @Input()
-  pagePlacement?: 'left' | 'center' | 'right' = 'right';
+  pagePlacement: 'left' | 'center' | 'right' = 'right';
   /** 切换分页时返回顶部 */
   @Input()
   get toTopInChange() {
@@ -297,7 +294,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   set multiSort(value: any) {
     if (typeof value === 'object') {
       this._multiSort = Object.assign(
-        <SimpleTableMultiSort>{
+        <NaTableMultiSort>{
           key: 'sort',
           separator: '-',
           name_separator: '.',
@@ -308,10 +305,10 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
       this._multiSort = toBoolean(value);
     }
   }
-  private _multiSort: boolean | SimpleTableMultiSort;
+  private _multiSort: boolean | NaTableMultiSort;
   /** 数据处理前回调 */
   @Input()
-  preDataChange: (data: SimpleTableData[]) => SimpleTableData[];
+  preDataChange: (data: NaTableData[]) => NaTableData[];
   /** `header` 标题 */
   @ContentChild('header')
   header: TemplateRef<void>;
@@ -323,43 +320,43 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   footer: TemplateRef<void>;
   /** `expand` 可展开，当数据源中包括 `expand` 表示展开状态 */
   @ContentChild('expand')
-  expand: TemplateRef<{ $implicit: any; column: SimpleTableColumn }>;
+  expand: TemplateRef<{ $implicit: any; column: NaTableColumn }>;
   @Input()
   noResult: string | TemplateRef<void>;
   @Input()
   widthConfig: string[];
   /** 页码、每页数量变化时回调 */
   @Output()
-  readonly change: EventEmitter<SimpleTableChange> = new EventEmitter<
-    SimpleTableChange
+  readonly change: EventEmitter<NaTableChange> = new EventEmitter<
+    NaTableChange
   >();
   /** checkbox变化时回调，参数为当前所选清单 */
   @Output()
-  readonly checkboxChange: EventEmitter<SimpleTableData[]> = new EventEmitter<
-    SimpleTableData[]
+  readonly checkboxChange: EventEmitter<NaTableData[]> = new EventEmitter<
+    NaTableData[]
   >();
   /** radio变化时回调，参数为当前所选 */
   @Output()
-  readonly radioChange: EventEmitter<SimpleTableData> = new EventEmitter<
-    SimpleTableData
+  readonly radioChange: EventEmitter<NaTableData> = new EventEmitter<
+    NaTableData
   >();
   /** 排序回调 */
   @Output()
   readonly sortChange: EventEmitter<any> = new EventEmitter<any>();
   /** Filter回调 */
   @Output()
-  readonly filterChange: EventEmitter<SimpleTableColumn> = new EventEmitter<
-    SimpleTableColumn
+  readonly filterChange: EventEmitter<NaTableColumn> = new EventEmitter<
+    NaTableColumn
   >();
   /** 行单击回调 */
   @Output()
-  readonly rowClick: EventEmitter<SimpleTableRowClick> = new EventEmitter<
-    SimpleTableRowClick
+  readonly rowClick: EventEmitter<NaTableRowClick> = new EventEmitter<
+    NaTableRowClick
   >();
   /** 行双击回调 */
   @Output()
-  readonly rowDblClick: EventEmitter<SimpleTableRowClick> = new EventEmitter<
-    SimpleTableRowClick
+  readonly rowDblClick: EventEmitter<NaTableRowClick> = new EventEmitter<
+    NaTableRowClick
   >();
   /** 行单击多少时长之类为双击（单位：毫秒），默认：`200` */
   @Input()
@@ -377,24 +374,25 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   //#endregion
 
   constructor(
-    private defConfig: AdSimpleTableConfig,
+    private cd: ChangeDetectorRef,
+    private cog: NaTableConfig,
     private http: HttpClient,
     private router: Router,
     private el: ElementRef,
     private renderer: Renderer2,
-    private exportSrv: SimpleTableExport,
-    @Optional() private acl: ACLService,
+    private exportSrv: NaTableExport,
     @Optional()
     @Inject(ALAIN_I18N_TOKEN)
-    private i18nSrv: AlainI18NService,
+    i18nSrv: AlainI18NService,
     private modal: ModalHelper,
     private currenty: CNCurrencyPipe,
     private date: DatePipe,
     private yn: YNPipe,
     private number: DecimalPipe,
     @Inject(DOCUMENT) private doc: any,
+    private columnSource: NaTableColumnSource,
   ) {
-    Object.assign(this, deepCopy(defConfig));
+    Object.assign(this, deepCopy(cog));
     if (i18nSrv) {
       this.i18n$ = i18nSrv.change.subscribe(() => this.updateColumns());
     }
@@ -411,7 +409,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   load(pi = 1, extraParams?: any) {
     if (pi !== -1) this.pi = pi;
     if (typeof extraParams !== 'undefined') {
-      this.extraParams = extraParams;
+      this._req.params = extraParams;
     }
     this._change('pi');
   }
@@ -444,18 +442,18 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   private getAjaxData(url?: string): Observable<any> {
     const params: any = Object.assign(
       {
-        [this.reqReName.pi]: this._zeroIndexedOnPage ? this.pi - 1 : this.pi,
-        [this.reqReName.ps]: this.ps,
+        [this._req.reName.pi]: this._zeroIndexedOnPage ? this.pi - 1 : this.pi,
+        [this._req.reName.ps]: this.ps,
       },
-      this.extraParams,
+      this._req.params,
       this.getReqSortMap(),
       this.getReqFilterMap(),
     );
     return this.http
-      .request(this.reqMethod || 'GET', url || this._url, {
+      .request(this._req.method || 'GET', url || this.url, {
         params,
-        body: this.reqBody,
-        headers: this.reqHeaders,
+        body: this._req.body,
+        headers: this._req.headers,
       })
       .pipe(
         map((res: any) => {
@@ -475,7 +473,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private _genAjax(forceRefresh: boolean = false) {
-    if (!this._isAjax) return;
+    if (!this.isAjax) return;
     this.loading = true;
     if (forceRefresh === true) this.pi = 1;
     this.getAjaxData().subscribe(
@@ -488,7 +486,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   _genData(forceRefresh: boolean = false) {
-    if (this._isAjax) return;
+    if (this.isAjax) return;
     let data = (<any[]>this.data).slice(0);
     // sort
     const sorterFn = this.getSorterFn();
@@ -552,15 +550,15 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
 
   private processData() {
     if (!this.data) {
-      this._isAjax = false;
+      this.isAjax = false;
       this.data = [];
       return;
     }
 
-    this._isAjax = false;
+    this.isAjax = false;
     if (typeof this.data === 'string') {
-      this._url = this.data as string;
-      this._isAjax = true;
+      this.url = this.data as string;
+      this.isAjax = true;
       this._genAjax(true);
     } else if (Array.isArray(this.data)) {
       this._genData(this.frontPagination);
@@ -588,7 +586,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   _change(type: 'pi' | 'ps') {
-    if (!this._inited) return;
+    if (!this.inited) return;
     this._genAjax();
     if (this.frontPagination) this._genData();
     this._toTop();
@@ -600,7 +598,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-  _get(item: any, col: SimpleTableColumn) {
+  _get(item: any, col: NaTableColumn) {
     if (col.format) return col.format(item, col);
 
     const value = deepGet(item, col.index as string[], col.default);
@@ -626,7 +624,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     return ret;
   }
 
-  _click(e: Event, item: any, col: SimpleTableColumn) {
+  _click(e: Event, item: any, col: NaTableColumn) {
     e.preventDefault();
     e.stopPropagation();
     const res = col.click(item, this);
@@ -654,24 +652,25 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
 
   //#region sort
 
-  _sortMap: { [key: number]: any } = {};
-  _sortColumn: SimpleTableColumn = null;
-  _sortOrder: string;
-  _sortIndex: number;
+  _sortMap: { [key: number]: NaTableSortMap } = {};
+
+  private get validSort(): NaTableSortMap[] {
+    return Object.keys(this._sortMap)
+      .filter(key => this._sortMap[key].enabled && this._sortMap[key].v)
+      .map(key => this._sortMap[key]);
+  }
 
   private getReqSortMap(): { [key: string]: string } {
     let ret: { [key: string]: string } = {};
     const ms = this.multiSort;
-    if (!ms && !this._sortOrder) return ret;
+    const sortList = this.validSort;
+    if (!ms && sortList.length === 0) return ret;
 
     if (ms) {
-      Object.keys(this._sortMap)
-        .filter(key => this._sortMap[key].enabled && this._sortMap[key].v)
-        .forEach(key => {
-          const item = this._sortMap[key];
-          ret[item.key] =
-            (item.column.sortReName || this.sortReName || {})[item.v] || item.v;
-        });
+      sortList.forEach(item => {
+        ret[item.key] =
+          (item.column.sortReName || this.sortReName || {})[item.v] || item.v;
+      });
       // 合并处理
       if (typeof ms === 'object') {
         ret = {
@@ -681,32 +680,30 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
         };
       }
     } else {
-      const mapData = this._sortMap[this._sortIndex];
+      const mapData = sortList[0];
       ret[mapData.key] =
-        (this._sortColumn.sortReName || this.sortReName || {})[mapData.v] ||
+        (sortList[0].column.sortReName || this.sortReName || {})[mapData.v] ||
         mapData.v;
     }
     return ret;
   }
 
   private getSorterFn() {
-    if (!this._sortOrder || !this._sortColumn) {
+    const sortList = this.validSort;
+    if (sortList.length === 0) {
       return;
     }
 
     return (a: any, b: any) => {
-      const result = (this._sortColumn.sorter as CompareFn)(a, b);
+      const result = (sortList[0].column.sorter as NaTableCompareFn)(a, b);
       if (result !== 0) {
-        return this._sortOrder === 'descend' ? -result : result;
+        return sortList[0].v === 'descend' ? -result : result;
       }
       return 0;
     };
   }
 
   sort(index: number, value: any) {
-    this._sortColumn = this._columns[index];
-    this._sortOrder = value;
-    this._sortIndex = index;
     if (this.multiSort) {
       this._sortMap[index].v = value;
     } else {
@@ -719,13 +716,12 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     this.sortChange.emit({
       value,
       map: this.getReqSortMap(),
-      column: this._sortColumn,
+      column: this._columns[index],
     });
   }
 
   clearSort() {
     Object.keys(this._sortMap).forEach(key => (this._sortMap[key].v = null));
-    this._sortOrder = null;
   }
 
   //#endregion
@@ -747,27 +743,23 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     return ret;
   }
 
-  private handleFilter(col: SimpleTableColumn) {
+  private handleFilter(col: NaTableColumn) {
     col.filtered = col.filters.findIndex(w => w.checked) !== -1;
     this._genAjax(true);
     this._genData(true);
     this.filterChange.emit(col);
   }
 
-  _filterConfirm(col: SimpleTableColumn) {
+  _filterConfirm(col: NaTableColumn) {
     this.handleFilter(col);
   }
 
-  _filterClear(col: SimpleTableColumn) {
+  _filterClear(col: NaTableColumn) {
     col.filters.forEach(i => (i.checked = false));
     this.handleFilter(col);
   }
 
-  _filterRadio(
-    col: SimpleTableColumn,
-    item: SimpleTableFilter,
-    checked: boolean,
-  ) {
+  _filterRadio(col: NaTableColumn, item: NaTableFilter, checked: boolean) {
     col.filters.forEach(i => (i.checked = false));
     item.checked = checked;
   }
@@ -794,7 +786,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     return this._refCheck()._checkNotify();
   }
 
-  _checkSelection(i: SimpleTableData, value: boolean) {
+  _checkSelection(i: NaTableData, value: boolean) {
     i.checked = value;
     return this._refCheck()._checkNotify();
   }
@@ -806,10 +798,11 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
       checkedList.length > 0 && checkedList.length === validData.length;
     const allUnChecked = validData.every(value => !value.checked);
     this._indeterminate = !this._allChecked && !allUnChecked;
+    setTimeout(() => this.cd.detectChanges());
     return this;
   }
 
-  _rowSelection(row: SimpleTableSelection): this {
+  _rowSelection(row: NaTableSelection): this {
     row.select(this._data);
     return this._refCheck()._checkNotify();
   }
@@ -832,7 +825,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     return this;
   }
 
-  _refRadio(checked: boolean, item: SimpleTableData): this {
+  _refRadio(checked: boolean, item: NaTableData): this {
     // if (item.disabled === true) return;
     this._data.filter(w => !w.disabled).forEach(i => (i.checked = false));
     item.checked = checked;
@@ -844,51 +837,11 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
 
   //#region buttons
 
-  private btnCoerce(list: SimpleTableButton[]): SimpleTableButton[] {
-    if (!list) return [];
-    const ret: SimpleTableButton[] = [];
-    for (const item of list) {
-      if (this.acl && item.acl && !this.acl.can(item.acl)) continue;
-
-      if (item.type === 'del' && typeof item.pop === 'undefined')
-        item.pop = true;
-
-      if (item.pop === true) {
-        item._type = 2;
-        if (typeof item.popTitle === 'undefined')
-          item.popTitle = `确认删除吗？`;
-      }
-      if (item.children && item.children.length > 0) {
-        item._type = 3;
-        item.children = this.btnCoerce(item.children);
-      }
-      if (!item._type) item._type = 1;
-
-      // i18n
-      if (item.i18n && this.i18nSrv) item.text = this.i18nSrv.fanyi(item.i18n);
-
-      ret.push(item);
-    }
-    this.btnCoerceIf(ret);
-    return ret;
-  }
-
-  private btnCoerceIf(list: SimpleTableButton[]) {
-    for (const item of list) {
-      if (!item.iif) item.iif = () => true;
-      if (!item.children) {
-        item.children = [];
-      } else {
-        this.btnCoerceIf(item.children);
-      }
-    }
-  }
-
-  _btnClick(e: Event, record: any, btn: SimpleTableButton) {
+  _btnClick(e: Event, record: any, btn: NaTableButton) {
     if (e) e.stopPropagation();
     if (btn.type === 'modal' || btn.type === 'static') {
       const obj = {};
-      obj[btn.paramName || this.defConfig.modalParamsName || 'record'] = record;
+      obj[btn.paramName || this.cog.modalParamsName || 'record'] = record;
       const options: ModalHelperOptions = Object.assign({}, btn.modal);
       // TODO: deprecated
       if (btn.size) options.size = btn.size;
@@ -912,7 +865,7 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     this.btnCallback(record, btn);
   }
 
-  private btnCallback(record: any, btn: SimpleTableButton, modal?: any) {
+  private btnCallback(record: any, btn: NaTableButton, modal?: any) {
     if (!btn.click) return;
     if (typeof btn.click === 'string') {
       switch (btn.click) {
@@ -928,34 +881,9 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  _btnText(record: any, btn: SimpleTableButton) {
+  _btnText(record: any, btn: NaTableButton) {
     if (btn.format) return btn.format(record, btn);
     return btn.text;
-  }
-
-  //#endregion
-
-  //#region fixed
-
-  private fixedCoerce(list: SimpleTableColumn[]) {
-    const countReduce = (a: number, b: SimpleTableColumn) =>
-      a + +b.width.toString().replace('px', '');
-    // left width
-    list
-      .filter(w => w.fixed && w.fixed === 'left' && w.width)
-      .forEach(
-        (item, idx) =>
-          (item._left = list.slice(0, idx).reduce(countReduce, 0) + 'px'),
-      );
-    // right width
-    list
-      .filter(w => w.fixed && w.fixed === 'right' && w.width)
-      .reverse()
-      .forEach(
-        (item, idx) =>
-          (item._right =
-            (idx > 0 ? list.slice(-idx).reduce(countReduce, 0) : 0) + 'px'),
-      );
   }
 
   //#endregion
@@ -967,17 +895,17 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
    * @param urlOrData 重新指定数据，例如希望导出所有数据非常有用
    * @param opt 额外参数
    */
-  export(urlOrData?: string | any[], opt?: STExportOptions) {
+  export(urlOrData?: string | any[], opt?: NaTableExportOptions) {
     (urlOrData
       ? typeof urlOrData === 'string'
         ? this.getAjaxData(urlOrData)
         : of(urlOrData)
-      : this._isAjax
+      : this.isAjax
         ? this.getAjaxData()
         : of(this.data)
     ).subscribe((res: any[]) =>
       this.exportSrv.export(
-        Object.assign({}, opt, <STExportOptions>{
+        Object.assign({}, opt, <NaTableExportOptions>{
           _d: res,
           _c: this._columns,
         }),
@@ -987,133 +915,31 @@ export class SimpleTableComponent implements OnInit, OnChanges, OnDestroy {
 
   //#endregion
 
-  ngOnInit(): void {
-    this._inited = true;
+  ngAfterViewInit(): void {
     this.updateColumns();
     this.processData();
+    this.inited = true;
   }
 
   private setClass() {
-    this._classMap.forEach(cls =>
-      this.renderer.removeClass(this.el.nativeElement, cls),
-    );
-
-    this._classMap = [];
-    if (this.pagePlacement)
-      this._classMap.push('ad-st__p' + this.pagePlacement);
-
-    this._classMap.forEach(cls =>
-      this.renderer.addClass(this.el.nativeElement, cls),
-    );
+    updateHostClass(this.el.nativeElement, this.renderer, {
+      [`na-table__p-${this.pagePlacement}`]: this.pagePlacement,
+    });
   }
 
   private updateColumns() {
-    this._columns = [];
-    if (!this.columns || this.columns.length === 0)
-      throw new Error(`the columns property muse be define!`);
-    let checkboxCount = 0;
-    let radioCount = 0;
-    const sortMap: Object = {};
-    let idx = 0;
-    const newColumns: SimpleTableColumn[] = [];
-    const copyColumens = deepCopy(this.columns) as SimpleTableColumn[];
-    for (const item of copyColumens) {
-      if (this.acl && item.acl && !this.acl.can(item.acl)) continue;
-      if (item.index) {
-        if (!Array.isArray(item.index)) item.index = item.index.split('.');
-
-        item.indexKey = item.index.join('.');
-      }
-      // rowSelection
-      if (!item.selections) item.selections = [];
-      if (item.type === 'checkbox') {
-        ++checkboxCount;
-        if (!item.width) {
-          item.width = `${item.selections.length > 0 ? 60 : 50}px`;
-        }
-      }
-      if (item.type === 'radio') {
-        ++radioCount;
-        item.selections = [];
-        if (!item.width) item.width = '50px';
-      }
-      if (item.type === 'yn' && typeof item.ynTruth === 'undefined') {
-        item.ynTruth = true;
-      }
-      if (
-        (item.type === 'link' && typeof item.click !== 'function') ||
-        (item.type === 'badge' && typeof item.badge === 'undefined') ||
-        (item.type === 'tag' && typeof item.tag === 'undefined')
-      ) {
-        (item as any).type = '';
-      }
-      if (!item.className) {
-        item.className = {
-          // 'checkbox': 'text-center',
-          // 'radio': 'text-center',
-          number: 'text-right',
-          currency: 'text-right',
-          date: 'text-center',
-        }[item.type];
-      }
-
-      // sorter
-      if (item.sorter && typeof item.sorter === 'function') {
-        sortMap[idx] = {
-          enabled: true,
-          v: item.sort,
-          key: item.sortKey || item.indexKey,
-          column: item,
-        };
-        if (item.sort && !this._sortColumn) {
-          this._sortColumn = item;
-          this._sortOrder = item.sort;
-          this._sortIndex = idx;
-        }
-      } else {
-        sortMap[idx] = {
-          enabled: false,
-        };
-      }
-      // filter
-      if (!item.filter || !item.filters) item.filters = [];
-      if (typeof item.filterMultiple === 'undefined')
-        item.filterMultiple = true;
-      if (!item.filterConfirmText) item.filterConfirmText = `确认`;
-      if (!item.filterClearText) item.filterClearText = `重置`;
-      if (!item.filterIcon) item.filterIcon = `anticon anticon-filter`;
-      item.filtered = item.filters.findIndex(w => w.checked) !== -1;
-
-      if (this.acl) {
-        item.selections = item.selections.filter(w => this.acl.can(w.acl));
-        item.filters = item.filters.filter(w => this.acl.can(w.acl));
-      }
-
-      // buttons
-      item.buttons = this.btnCoerce(item.buttons);
-      // i18n
-      if (item.i18n && this.i18nSrv) item.title = this.i18nSrv.fanyi(item.i18n);
-      // custom row
-      if (item.render) {
-        item.__renderTitle = this._customTitles[item.render];
-        item.__render = this._customRows[item.render];
-      }
-
-      ++idx;
-      newColumns.push(item);
-    }
-    if (checkboxCount > 1) throw new Error(`just only one column checkbox`);
-    if (radioCount > 1) throw new Error(`just only one column radio`);
-    this.fixedCoerce(newColumns);
-    this._columns = newColumns;
-    this._sortMap = sortMap;
+    const res = this.columnSource.process(this.columns);
+    this._columns = res.columns;
+    this._sortMap = res.sortMap;
   }
 
   ngOnChanges(
     changes: { [P in keyof this]?: SimpleChange } & SimpleChanges,
   ): void {
-    if (changes.columns && this._inited) this.updateColumns();
-    if (changes.data && this._inited) this.processData();
+    if (!this.inited) return;
+
+    if (changes.columns) this.updateColumns();
+    if (changes.data) this.processData();
 
     this.setClass();
   }

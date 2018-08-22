@@ -24,12 +24,22 @@ v2 的主要升级是 `@delon/*` 系列组件，以中后台最基础操作重�
 
 - 所有组件名增加 `na-` 前缀，属性名依然保持不变。
 
-### 属性名变更
+### 组件名变更细节
 
-| 组件 | 原属性名 | 新属性名 | 描述 |
+| 原组件名 | 新组件名 | 描述 |
+| ------ | ------ | ---- |
+| `simple-table` | `na-table` | - |
+
+### 组件属性名变更
+
+| 所属组件 | 原属性名 | 新属性名 | 描述 |
 | ------ | ------ | ---- | --- |
-| `page-header` | `home_link` | `homeLink` | - |
-| `page-header` | `home_i18n` | `homeI18n` | - |
+| `na-page-header` | `home_link` | `homeLink` | - |
+| `na-page-header` | `home_i18n` | `homeI18n` | - |
+| `na-table` | `extraParams` | `req.params` | - |
+| `na-table` | `reqMethod` | `req.method` | - |
+| `na-table` | `reqHeader` | `req.header` | - |
+| `na-table` | `reqBody` | `req.body` | - |
 
 ## API变更
 

@@ -7,20 +7,20 @@ title: 自定义数据
 
 ```ts
 import { Component, OnInit } from '@angular/core';
-import { SimpleTableColumn, SimpleTableFilter } from '@delon/abc';
+import { NaTableColumn, NaTableFilter } from '@delon/abc';
 import { of } from 'rxjs';
 import { delay } from 'rxjs/operators';
 
 @Component({
   selector: 'app-demo',
-  template: `<simple-table [data]="users" [ps]="3" [columns]="columns"
+  template: `<na-table [data]="users" [ps]="3" [columns]="columns"
         (checkboxChange)="checkboxChange($event)" (sortChange)="sortChange($event)"
         pagePlacement="center" toTopInChange
-        showSizeChanger showQuickJumper showTotal isPageIndexReset></simple-table>`,
+        showSizeChanger showQuickJumper showTotal isPageIndexReset></na-table>`,
 })
 export class DemoComponent implements OnInit {
   users: any[] = [];
-  columns: SimpleTableColumn[] = [
+  columns: NaTableColumn[] = [
     {
       title: '编号',
       index: 'id',
@@ -46,7 +46,7 @@ export class DemoComponent implements OnInit {
         { text: 'name 1', value: 'name 1' },
         { text: 'name 2', value: 'name 2' },
       ],
-      filter: (filter: SimpleTableFilter, record: any) =>
+      filter: (filter: NaTableFilter, record: any) =>
         record.name.indexOf(filter.value) === 0,
     },
     {
@@ -59,7 +59,7 @@ export class DemoComponent implements OnInit {
         { text: '25岁以上', value: [25, 100] },
       ],
       filterMultiple: false,
-      filter: (filter: SimpleTableFilter, record: any) =>
+      filter: (filter: NaTableFilter, record: any) =>
         record.age >= filter.value[0] && record.age <= filter.value[1],
     },
     {

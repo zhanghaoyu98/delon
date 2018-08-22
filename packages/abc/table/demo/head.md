@@ -7,22 +7,22 @@ title: 后端筛选和排序
 
 ```ts
 import { Component } from '@angular/core';
-import { SimpleTableColumn } from '@delon/abc';
+import { NaTableColumn } from '@delon/abc';
 
 @Component({
   selector: 'app-demo',
   template: `
   <button nz-button (click)="st.reset()">重置</button>
-  <simple-table #st [data]="url" [extraParams]="params" [total]="total" [columns]="columns"
+  <na-table #st [data]="url" [req]="{params: params}" [total]="total" [columns]="columns"
                 [resReName]="{list: 'results' }"
-                multiSort></simple-table>
+                multiSort></na-table>
   `,
 })
 export class DemoComponent {
   url = `https://randomuser.me/api/?results=3`;
   params = { a: 1, b: 2 };
   total = 100;
-  columns: SimpleTableColumn[] = [
+  columns: NaTableColumn[] = [
     { title: '编号', index: 'id.value' },
     { title: '头像', type: 'img', width: '50px', index: 'picture.thumbnail' },
     {

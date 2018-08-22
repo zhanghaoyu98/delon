@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { SimpleTableMultiSort } from './interface';
+import { NaTableMultiSort, NaTableRequest } from './interface';
 
 @Injectable()
-export class AdSimpleTableConfig {
+export class NaTableConfig {
   /**
    * 起始页码，默认为：`1`
    */
@@ -55,10 +55,11 @@ export class AdSimpleTableConfig {
    * 返回顶部偏移值
    */
   toTopOffset?: number;
-  /**
-   * 重命名请求参数 `pi`、`ps`，例如：`{ pi: 'Page' }` `pi` 会被替换成 Page
-   */
-  reqReName?: Object;
+  /** 请求体配置 */
+  req?: NaTableRequest = {
+    method: 'GET',
+    reName: { pi: 'pi', ps: 'ps' }
+  };
   /**
    * 请求参数 `pi` 是否采用 0 基索引
    */
@@ -74,7 +75,7 @@ export class AdSimpleTableConfig {
   /**
    * 是否多排序，当 `sort` 多个相同值时自动合并，建议后端支持时使用
    */
-  multiSort?: boolean | SimpleTableMultiSort = false;
+  multiSort?: boolean | NaTableMultiSort = false;
   /**
    * 指定模态框目标组件的接收参数名，默认：`record`
    */
@@ -87,4 +88,12 @@ export class AdSimpleTableConfig {
    * 行单击多少时长之类为双击（单位：毫秒），默认：`200`
    */
   rowClickTime? = 200;
+  /**
+   * 过滤按钮确认文本，默认：`确认`
+   */
+  filterConfirmText? = '确认';
+  /**
+   * 过滤按钮重置文本，默认：`重置`
+   */
+  filterClearText? = '重置';
 }

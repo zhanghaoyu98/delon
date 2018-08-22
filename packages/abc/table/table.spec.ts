@@ -26,23 +26,23 @@ import { deepCopy, deepGet } from '@delon/util';
 import { of, Observable, Subject } from 'rxjs';
 
 import {
-  SimpleTableFilter,
-  SimpleTableColumn,
-  ResReNameType,
-  SimpleTableMultiSort,
-  SimpleTableData,
-  SimpleTableBadge,
-  SimpleTableTag,
+  NaTableFilter,
+  NaTableColumn,
+  NaTableResReNameType,
+  NaTableMultiSort,
+  NaTableData,
+  NaTableBadge,
+  NaTableTag,
 } from './interface';
-import { AdSimpleTableModule } from './simple-table.module';
-import { SimpleTableComponent } from './simple-table.component';
+import { NaTableModule } from './table.module';
+import { NaTableComponent } from './table.component';
 import {
   AlainI18NServiceFake,
   AlainI18NService,
 } from '../../theme/src/services/i18n/i18n';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { dispatchDropDown } from '../../testing';
-import { SimpleTableExport } from './simple-table-export';
+import { NaTableExport } from './table-export';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Router } from '@angular/router';
 
@@ -81,13 +81,13 @@ class MockI18NServiceFake extends AlainI18NServiceFake {
   }
 }
 
-describe('abc: simple-table', () => {
+describe('abc: table', () => {
   let injector: Injector;
   let fixture: ComponentFixture<TestComponent>;
   let context: TestComponent;
   let dl: DebugElement;
   let page: PageObject;
-  let comp: SimpleTableComponent;
+  let comp: NaTableComponent;
 
   function genModule(other: {
     acl?: boolean;
@@ -105,7 +105,7 @@ describe('abc: simple-table', () => {
       RouterTestingModule.withRoutes([]),
       NgZorroAntdModule.forRoot(),
       AlainThemeModule.forRoot(),
-      AdSimpleTableModule.forRoot(),
+      NaTableModule.forRoot(),
     ];
     if (other.acl) imports.push(DelonACLModule.forRoot());
     const providers = [];
@@ -429,7 +429,7 @@ describe('abc: simple-table', () => {
         });
       });
       describe('with badge', () => {
-        const STATUS: SimpleTableBadge = {
+        const STATUS: NaTableBadge = {
           1: { text: 'Success', color: 'success' },
           2: { text: 'Error', color: 'error' },
           3: { text: 'Processing', color: 'processing' },
@@ -450,7 +450,7 @@ describe('abc: simple-table', () => {
         });
       });
       describe('with tag', () => {
-        const STATUS: SimpleTableTag = {
+        const STATUS: NaTableTag = {
           1: { text: 'Success', color: 'success' },
           2: { text: 'Error', color: 'error' },
           3: { text: 'Processing', color: 'processing' },
@@ -507,7 +507,7 @@ describe('abc: simple-table', () => {
       });
       describe('[buttons]', () => {
         it(`should be pop confirm when type=del`, () => {
-          const columns: SimpleTableColumn[] = [
+          const columns: NaTableColumn[] = [
             {
               title: '',
               buttons: [
@@ -539,7 +539,7 @@ describe('abc: simple-table', () => {
         it(
           'should be a dropdown menu buttons',
           fakeAsync(() => {
-            const columns: SimpleTableColumn[] = [
+            const columns: NaTableColumn[] = [
               {
                 title: '',
                 buttons: [
@@ -558,7 +558,7 @@ describe('abc: simple-table', () => {
           }),
         );
         it('should custom render text via format', () => {
-          const columns: SimpleTableColumn[] = [
+          const columns: NaTableColumn[] = [
             {
               title: '',
               buttons: [
@@ -573,7 +573,7 @@ describe('abc: simple-table', () => {
         });
         describe('[condition]', () => {
           it('should be hide menu in first row', () => {
-            const columns: SimpleTableColumn[] = [
+            const columns: NaTableColumn[] = [
               {
                 title: '',
                 buttons: [{ text: 'a', iif: (item: any) => item.id !== 1 }],
@@ -587,7 +587,7 @@ describe('abc: simple-table', () => {
         });
         describe('[events]', () => {
           it('#reload', () => {
-            const columns: SimpleTableColumn[] = [
+            const columns: NaTableColumn[] = [
               {
                 title: '',
                 buttons: [{ text: 'a', click: 'reload' }],
@@ -600,7 +600,7 @@ describe('abc: simple-table', () => {
             expect(comp.reload).toHaveBeenCalled();
           });
           it('#load', () => {
-            const columns: SimpleTableColumn[] = [
+            const columns: NaTableColumn[] = [
               {
                 title: '',
                 buttons: [{ text: 'a', click: 'load' }],
@@ -614,7 +614,7 @@ describe('abc: simple-table', () => {
           });
           describe('#modal', () => {
             it('#modal', () => {
-              const columns: SimpleTableColumn[] = [
+              const columns: NaTableColumn[] = [
                 {
                   title: '',
                   buttons: [
@@ -635,7 +635,7 @@ describe('abc: simple-table', () => {
               mock$.unsubscribe();
             });
             it('#static', () => {
-              const columns: SimpleTableColumn[] = [
+              const columns: NaTableColumn[] = [
                 {
                   title: '',
                   buttons: [
@@ -661,7 +661,7 @@ describe('abc: simple-table', () => {
               mock$.unsubscribe();
             });
             it('[deprecated] #size', () => {
-              const columns: SimpleTableColumn[] = [
+              const columns: NaTableColumn[] = [
                 {
                   title: '',
                   buttons: [
@@ -687,7 +687,7 @@ describe('abc: simple-table', () => {
               mock$.unsubscribe();
             });
             it('[deprecated] #modalOptions', () => {
-              const columns: SimpleTableColumn[] = [
+              const columns: NaTableColumn[] = [
                 {
                   title: '',
                   buttons: [
@@ -715,7 +715,7 @@ describe('abc: simple-table', () => {
           });
           describe('#link', () => {
             it('should be trigger click', () => {
-              const columns: SimpleTableColumn[] = [
+              const columns: NaTableColumn[] = [
                 {
                   title: '',
                   buttons: [{ text: 'a', type: 'link', click: () => null }],
@@ -729,7 +729,7 @@ describe('abc: simple-table', () => {
               expect(router.navigateByUrl).not.toHaveBeenCalled();
             });
             it('should be navigate when return a string value', () => {
-              const columns: SimpleTableColumn[] = [
+              const columns: NaTableColumn[] = [
                 {
                   title: '',
                   buttons: [
@@ -842,7 +842,7 @@ describe('abc: simple-table', () => {
       it('with true', () => {
         context.toTopInChange = true;
         fixture.detectChanges();
-        const el = page.getEl('simple-table');
+        const el = page.getEl('na-table');
         spyOn(el, 'scrollIntoView');
         expect(el.scrollIntoView).not.toHaveBeenCalled();
         page.go(2);
@@ -851,7 +851,7 @@ describe('abc: simple-table', () => {
       it('with false', () => {
         context.toTopInChange = false;
         fixture.detectChanges();
-        const el = page.getEl('simple-table');
+        const el = page.getEl('na-table');
         spyOn(el, 'scrollIntoView');
         expect(el.scrollIntoView).not.toHaveBeenCalled();
         page.go(2);
@@ -861,7 +861,7 @@ describe('abc: simple-table', () => {
         context.scroll = { x: '1300px' };
         context.toTopInChange = true;
         fixture.detectChanges();
-        const el = page.getEl('simple-table');
+        const el = page.getEl('na-table');
         spyOn(el, 'scrollIntoView');
         expect(el.scrollIntoView).not.toHaveBeenCalled();
         page.go(2);
@@ -891,9 +891,9 @@ describe('abc: simple-table', () => {
     describe('[custom render template]', () => {
       it('with column title', () => {
         genModule({
-          template: `<simple-table #st [data]="data" [columns]="columns">
+          template: `<na-table #st [data]="data" [columns]="columns">
             <ng-template [st-row]="id" type="title"><div class="id-title">ID</div></ng-template>
-          </simple-table>`,
+          </na-table>`,
         });
         page.newColumn([{ title: '', index: 'id' }]);
         expect(page.getHead('id').querySelector('.id-title').textContent).toBe(
@@ -902,18 +902,18 @@ describe('abc: simple-table', () => {
       });
       it('should be custom row', () => {
         genModule({
-          template: `<simple-table #st [data]="data" [columns]="columns">
+          template: `<na-table #st [data]="data" [columns]="columns">
             <ng-template [st-row]="id" let-item><div class="j-id">id{{item.id}}</div></ng-template>
-          </simple-table>`,
+          </na-table>`,
         });
         page.newColumn([{ title: '', index: 'id' }]);
         expect(page.getCell().querySelector('.j-id').textContent).toBe('id1');
       });
       it('allow invalid id', () => {
         genModule({
-          template: `<simple-table #st [data]="data" [columns]="columns">
+          template: `<na-table #st [data]="data" [columns]="columns">
             <ng-template [st-row]="invalid-id" let-item><div class="j-id">id{{item.id}}</div></ng-template>
-          </simple-table>`,
+          </na-table>`,
         });
         page.newColumn([{ title: '', index: 'id' }]);
         expect(page.getCell().querySelector('.j-id')).toBeNull();
@@ -1053,9 +1053,9 @@ describe('abc: simple-table', () => {
             const h = httpMock.expectOne(w => true) as TestRequest;
             expect(h.request.urlWithParams).toContain('s1=ascend&s2=descend');
           });
-          describe('when using SimpleTableMultiSort', () => {
+          describe('when using NaTableMultiSort', () => {
             it('should combine values', () => {
-              context.multiSort = <SimpleTableMultiSort>{};
+              context.multiSort = <NaTableMultiSort>{};
               fixture.detectChanges();
               const h = httpMock.expectOne(w => true) as TestRequest;
               expect(h.request.urlWithParams).toContain(
@@ -1136,10 +1136,10 @@ describe('abc: simple-table', () => {
         it(
           'should used re-name keys',
           fakeAsync(() => {
-            const c = deepCopy(columns) as SimpleTableColumn[];
+            const c = deepCopy(columns) as NaTableColumn[];
             c[0].filterReName = (
-              list: SimpleTableFilter[],
-              col: SimpleTableColumn,
+              list: NaTableFilter[],
+              col: NaTableColumn,
             ) => ({ a: 1 });
             page.newColumn(c).openDropDownInHead('id');
             // choose first
@@ -1158,7 +1158,7 @@ describe('abc: simple-table', () => {
         it(
           'should only filter one item when filterMultiple with false',
           fakeAsync(() => {
-            const c = deepCopy(columns) as SimpleTableColumn[];
+            const c = deepCopy(columns) as NaTableColumn[];
             c[0].filterMultiple = false;
             page.newColumn(c).openDropDownInHead('id');
             // choose first
@@ -1225,7 +1225,7 @@ describe('abc: simple-table', () => {
         });
       });
       describe('#frontPagination', () => {
-        // `true` 由 `simple-table` 根据 `data` 长度受控分页，包括：排序、过滤等
+        // `true` 由 `na-table` 根据 `data` 长度受控分页，包括：排序、过滤等
         describe('with true', () => {
           beforeEach(() => (context.frontPagination = true));
           it('should be control paged by data', () => {
@@ -1372,7 +1372,7 @@ describe('abc: simple-table', () => {
         });
       });
       describe('#filter', () => {
-        const columns: SimpleTableColumn[] = [
+        const columns: NaTableColumn[] = [
           {
             title: '',
             index: 'id',
@@ -1380,7 +1380,7 @@ describe('abc: simple-table', () => {
               { text: 'name 1', value: 'name 1' },
               { text: 'name 2', value: 'name 2' },
             ],
-            filter: (filter: SimpleTableFilter, record: any) =>
+            filter: (filter: NaTableFilter, record: any) =>
               record.name.indexOf(filter.value) === 0,
           },
         ];
@@ -1510,9 +1510,9 @@ describe('abc: simple-table', () => {
       }));
     });
     describe('#export', () => {
-      let exportSrv: SimpleTableExport;
+      let exportSrv: NaTableExport;
       beforeEach(() => {
-        genModule({ minColumn: true, providers: [SimpleTableExport] });
+        genModule({ minColumn: true, providers: [NaTableExport] });
         fixture.detectChanges();
         exportSrv = comp['exportSrv'];
         spyOn(exportSrv, 'export');
@@ -1812,7 +1812,7 @@ describe('abc: simple-table', () => {
       fixture.detectChanges();
       return this;
     }
-    newColumn(columns: SimpleTableColumn[], pi = 1, ps = PS): this {
+    newColumn(columns: NaTableColumn[], pi = 1, ps = PS): this {
       context.columns = columns;
       context.pi = pi;
       context.ps = ps;
@@ -1889,7 +1889,7 @@ describe('abc: simple-table', () => {
 
 @Component({
   template: `
-    <simple-table #st
+    <na-table #st
         [data]="data" [extraParams]="extraParams"
         [reqMethod]="reqMethod" [reqBody]="reqBody" [reqHeaders]="reqHeaders" [reqReName]="reqReName" (reqError)="reqError()"
         [resReName]="resReName"
@@ -1920,10 +1920,10 @@ describe('abc: simple-table', () => {
         (rowClick)="rowClick()"
         (rowDblClick)="rowDblClick()"
     >
-    </simple-table>`,
+    </na-table>`,
 })
 class TestComponent {
-  @ViewChild('st') comp: SimpleTableComponent;
+  @ViewChild('st') comp: NaTableComponent;
   data: string | any[] | Observable<any[]> = deepCopy(USERS);
   extraParams: any;
   reqMethod: string;
@@ -1932,9 +1932,9 @@ class TestComponent {
   reqReName: Object;
   zeroIndexedOnPage = false;
   reqError() {}
-  resReName: ResReNameType;
+  resReName: NaTableResReNameType;
   ps = PS;
-  columns: SimpleTableColumn[];
+  columns: NaTableColumn[];
   pi: number;
   total: number;
   showPagination = true;
@@ -1953,8 +1953,8 @@ class TestComponent {
   toTopInChange: boolean;
   toTopOffset: number;
   sortReName: { ascend?: string; descend?: string };
-  multiSort: boolean | SimpleTableMultiSort;
-  preDataChange: (data: SimpleTableData[]) => SimpleTableData[] = null;
+  multiSort: boolean | NaTableMultiSort;
+  preDataChange: (data: NaTableData[]) => NaTableData[] = null;
   noResult = 'noResult';
   change() {}
   checkboxChange() {}

@@ -10,12 +10,12 @@ title: 固定列
 
 ```ts
 import { Component } from '@angular/core';
-import { SimpleTableColumn } from '@delon/abc';
+import { NaTableColumn } from '@delon/abc';
 
 @Component({
   selector: 'app-demo',
   template: `
-    <simple-table [data]="users" [ps]="3" [columns]="columns" [scroll]="{x: '1300px'}"></simple-table>
+    <na-table [data]="users" [ps]="3" [columns]="columns" [scroll]="{x: '1300px'}"></na-table>
   `,
 })
 export class DemoComponent {
@@ -32,7 +32,7 @@ export class DemoComponent {
           1}. My name is John Brown, I am 32 years old, living in New York No. 1 Lake Park.`,
       };
     });
-  columns: SimpleTableColumn[] = [
+  columns: NaTableColumn[] = [
     { title: '编号1', index: 'id', fixed: 'left', width: '100px' },
     { title: '编号2', index: 'id', fixed: 'left', width: '100px' },
     { title: '编号3', index: 'id', fixed: 'left', width: '100px' },

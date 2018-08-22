@@ -8,10 +8,10 @@ title: 自定义按钮组
 ```ts
 import { Component, Input } from '@angular/core';
 import {
-  SimpleTableColumn,
-  SimpleTableChange,
-  SimpleTableFilter,
-  SimpleTableButton,
+  NaTableColumn,
+  NaTableChange,
+  NaTableFilter,
+  NaTableButton,
 } from '@delon/abc';
 import { NzMessageService } from 'ng-zorro-antd';
 import { DemoModalComponent } from 'app/shared/components/modal/demo.component';
@@ -19,8 +19,8 @@ import { DemoModalComponent } from 'app/shared/components/modal/demo.component';
 @Component({
   selector: 'app-demo',
   template: `
-    <simple-table [data]="users" [ps]="3" [columns]="columns">
-    </simple-table>
+    <na-table [data]="users" [ps]="3" [columns]="columns">
+    </na-table>
     `,
 })
 export class DemoComponent {
@@ -35,7 +35,7 @@ export class DemoComponent {
         age: Math.ceil(Math.random() * 10) + 20,
       };
     });
-  columns: SimpleTableColumn[] = [
+  columns: NaTableColumn[] = [
     { title: '编号', index: 'id' },
     { title: '姓名', index: 'name' },
     { title: '年龄', index: 'age' },
@@ -47,7 +47,7 @@ export class DemoComponent {
           type: 'del',
           click: (record: any) =>
             this.message.success(`成功删除【${record.name}】`),
-          if: (item: any, btn: SimpleTableButton, column: SimpleTableColumn) =>
+          if: (item: any, btn: NaTableButton, column: NaTableColumn) =>
             item.id % 2 === 0,
         },
         {

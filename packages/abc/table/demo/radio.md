@@ -1,37 +1,38 @@
 ---
-order: 3
-title: 可选择
+order: 4
+title: 单选框
 ---
 
-利用 `checkboxChange` 监听所选的数据清单。
+利用 `radioChange` 监听所选的数据清单。
 
 ```ts
 import { Component } from '@angular/core';
-import { SimpleTableColumn, SimpleTableData } from '@delon/abc';
+import { NaTableColumn, NaTableData } from '@delon/abc';
 
 @Component({
   selector: 'app-demo',
-  template: `<simple-table [data]="url" [extraParams]="params" [total]="total" [columns]="columns"
+  template: `<na-table [data]="url" [req]="{params: params}" [total]="total" [columns]="columns"
         [preDataChange]="dataChange" [resReName]="{list: 'results' }"
-        (checkboxChange)="checkboxChange($event)"></simple-table>`
+        (radioChange)="radioChange($event)"></na-table>`
 })
 export class DemoComponent {
   url = `https://randomuser.me/api/?results=3`;
   params = { a: 1, b: 2 };
   total = 100;
-  columns: SimpleTableColumn[] = [
-    { title: '编号', index: 'id.value', type: 'checkbox' },
+  columns: NaTableColumn[] = [
+    { title: '编号', index: 'id.value', type: 'radio' },
     { title: '头像', type: 'img', width: '50px', index: 'picture.thumbnail' },
     { title: '邮箱', index: 'email' },
     { title: '电话', index: 'phone' },
     { title: '注册时间', type: 'date', index: 'registered.date' }
   ];
-  checkboxChange(list: any[]) {
-    console.log('checkboxChange', list);
+  radioChange(ret: any) {
+    console.log('radioChange', ret);
   }
-  dataChange(data: SimpleTableData[]) {
-    return data.map((i: SimpleTableData, index: number) => {
+  dataChange(data: NaTableData[]) {
+    return data.map((i: NaTableData, index: number) => {
       i.disabled = index === 0;
+      i.hidden = index === 1;
       return i;
     });
   }
